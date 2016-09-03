@@ -39,17 +39,65 @@ convertCell cell
     | cell  = "█"
     | otherwise = " "
 
-swapValue :: [Bool] -> Int -> [Bool]
-swapValue row ind = 
-    let (front,val:end) = splitAt ind row
-    in front ++ (not val):end
+swapRow :: [[Bool]] -> Int -> [Bool]
+swapRow matrix y =
+    let (top, row:bottom) = splitAt y matrix
+        rowLength = (length row) - 1
+        swappedRow = [ (swapCell cellValue neighbourCount) | x <- [0..rowLength], 
+                let neighbourCount = getNeighbourCount matrix x y,
+                let cellValue = getCellValue matrix x y ]
+    in swappedRow
 
--- TODO: remove as transition completed
-flipRow :: [Bool] -> [Bool]
-flipRow row = [ (not x) | x <- row ]
-        
--- TODO: transition needs to update cells
-runTransition oldMatrix = [ (flipRow row) | row <- oldMatrix ] 
+swapCell :: Bool -> Int -> Bool
+swapCell cell neighbourCount
+    | cell == True = changeLiveCell neighbourCount
+    | cell == False = changeDeadCell neighbourCount 
+
+changeLiveCell neighbourCount
+    | neighbourCount < 2    = False
+    | neighbourCount == 2   = True
+    | neighbourCount == 3   = True
+    | otherwise             = False 
+
+changeDeadCell neighbourCount
+    | neighbourCount == 3   = True
+    | otherwise             = False
+
+runTransition matrix = 
+    let matrixLength = (length matrix) - 1
+    in [ (swapRow matrix y) | y <- [0..matrixLength] ]
+
+getCellValue :: [[Bool]] -> Int -> Int -> Bool
+getCellValue matrix x y = matrix !! y !! x 
+
+-- | Returns 1 if the neighbour is True, 0 if False.
+getNeighbour :: [[Bool]] -> Int -> Int -> Int
+getNeighbour matrix x y
+    | x == -1 = 0
+    | y == -1 = 0
+    | y == (length matrix)  = 0
+    | x == (length (head matrix)) = 0
+    | otherwise = 
+        let value = matrix !! y !! x
+        in (if value then 1 else 0)
+
+{-| Counts the number of neighbours that a cell has from the 8 neighbours 
+ - (vertically, horizontally, or diagonally adjacent).
+-}
+getNeighbourCount :: [[Bool]] -> Int -> Int -> Int
+getNeighbourCount matrix x y = 
+    let topLeft = getNeighbour matrix (x - 1) (y - 1) 
+        top     = getNeighbour matrix x (y - 1) 
+        topRight = getNeighbour matrix (x + 1) (y - 1) 
+        right   = getNeighbour matrix (x + 1) y 
+        bottomRight = getNeighbour matrix (x + 1) (y + 1) 
+        bottom  = getNeighbour matrix x (y + 1) 
+        bottomLeft = getNeighbour matrix (x - 1) (y + 1) 
+        left    = getNeighbour matrix (x - 1) y 
+    in topLeft + top 
+        + topRight + right
+        + bottomRight + bottom
+        + bottomLeft + left
          
 repeatLoop _ 0 = return ()
 repeatLoop matrix n =
